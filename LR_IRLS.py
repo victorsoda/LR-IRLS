@@ -21,8 +21,8 @@ def read_data_from_file(filename):
     y = np.array(y)
     y[y < 0] = 0
     X = np.array(X)
-    X = X[:2000]
-    y = y[:2000]
+    # X = X[:2000]
+    # y = y[:2000]
     return X, y
 
 
@@ -62,19 +62,21 @@ def IRLS(X, y, lam, maxiter=10, break_thres=0.001):
     """
     N = y.shape[0]
     R = np.diag(np.repeat(1, N))
-    z = np.linalg.inv(R)@y
-    H = X.T@R@X + lam * np.eye(feature_num)
+    # z = np.linalg.inv(R)@y
+    # H = X.T@R@X + lam * np.eye(feature_num)
     # w = np.linalg.pinv(H)@(X.T@R@z)  # 为什么要这样初始化呢？
     w = np.random.normal(0, 0.01, feature_num)
+    print("Start iterations..")
     for it in range(maxiter):
         Xw = X@w
         mu = sigmoid(Xw)
-        R = np.diag(np.multiply(mu, 1 - mu))
+        r = np.multiply(mu, 1 - mu)
+        R = np.diag(r)
+        R_inv = np.diag(1 / r)
         XR = X.T@R
         H = XR@X + lam * np.eye(feature_num)
-        z = Xw - np.linalg.inv(R)@(mu - y)
+        z = Xw - R_inv@(mu - y)
         w_next = np.linalg.pinv(H)@XR@z    # H求伪逆
-        # print(w_next)
         if np.sum(np.abs(w_next - w)) < break_thres:
             return w_next
         else:
@@ -89,11 +91,12 @@ if __name__ == '__main__':
     train_X, train_y = read_data_from_file(train_file)
     test_X, test_y = read_data_from_file(test_file)
     print("y.shape =", train_y.shape)
-    for lam in [0, 1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3]:
-    # for lam in [0.1]:
-        w_final = IRLS(train_X, train_y, lam)
-        eva = get_evaluations(test_X, test_y, w_final)
-        print("When lambda = %f test accuracy = %f, precision = %f, recall = %f, f1_score = %f, l2_norm = %f"
-              % (lam, eva[0], eva[1], eva[2], eva[3], L2_norm(w_final)))
-
+    with open("result.txt", 'w', encoding='utf-8') as f:
+        for lam in [0, 1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3]:
+        # for lam in [0.1]:
+            w_final = IRLS(train_X, train_y, lam)
+            eva = get_evaluations(test_X, test_y, w_final)
+            print("When lambda = %f test accuracy = %f, precision = %f, recall = %f, f1_score = %f, l2_norm = %f"
+                  % (lam, eva[0], eva[1], eva[2], eva[3], L2_norm(w_final)))
+            f.write("%f,%f,%f,%f,%f,%f\n" % (lam, eva[0], eva[1], eva[2], eva[3], L2_norm(w_final)))
 
